@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import {
   getUniversitiesWithRelations,
   createUniversityWithReviewsTransaction,
@@ -42,7 +44,7 @@ async function handleCreateUniversityWithReviews(formData: FormData) {
   }
 }
 
-// Server Action: Test $transaction with success OR simulated rollback
+// Server Action: Test transaction with success OR simulated rollback
 async function handleUpdateStatusTransaction(formData: FormData) {
   "use server";
   const applicationId = formData.get("applicationId") as string;
@@ -79,7 +81,7 @@ export default async function PrismaDemoPage() {
   try {
     universities = await getUniversitiesWithRelations();
   } catch (e: any) {
-    dbError = e.message || "Could not connect to PostgreSQL.";
+    dbError = "The database is temporarily unavailable. Please try again later.";
   }
 
   return (
@@ -88,11 +90,11 @@ export default async function PrismaDemoPage() {
       <div className="mb-10 border-b border-ink-700/10 dark:border-paper/10 pb-6">
         <p className="eyebrow mb-2">Experiment 5</p>
         <h1 className="text-3xl font-display font-medium text-ink-950 dark:text-white">
-          Prisma ORM with PostgreSQL & Transactions
+          Netlify Database with PostgreSQL & Transactions
         </h1>
         <p className="text-sm text-ink-950/70 dark:text-paper/70 mt-2 max-w-2xl">
           Demonstrating relational database layers (1-to-many University → Reviews, Applications → AuditLog)
-          and atomic transactional operations using <code className="bg-ink-900/10 dark:bg-paper/10 px-1 py-0.5 rounded font-mono">prisma.$transaction</code>.
+          and atomic transactional operations using <code className="bg-ink-900/10 dark:bg-paper/10 px-1 py-0.5 rounded font-mono">db.transaction</code>.
         </p>
       </div>
 
@@ -101,7 +103,7 @@ export default async function PrismaDemoPage() {
           <p className="font-medium">PostgreSQL Connection Status Notice:</p>
           <p className="font-mono text-xs mt-1">{dbError}</p>
           <p className="mt-2 text-xs opacity-80">
-            Ensure your local PostgreSQL server is active at the credentials in <code className="font-mono">.env</code>. The transactional schemas, client models, and server actions are fully compiled.
+            Please retry after the database deployment has completed.
           </p>
         </div>
       )}
@@ -190,10 +192,10 @@ export default async function PrismaDemoPage() {
         {/* Form 2: Transactional State Update with Audit */}
         <div className="bg-white dark:bg-ink-900 border border-ink-700/10 dark:border-paper/10 rounded-xl p-6 shadow-sm">
           <h2 className="text-lg font-display font-medium mb-1 text-ink-950 dark:text-white">
-            2. $transaction (Atomic Update + Audit Log)
+            2. transaction (Atomic Update + Audit Log)
           </h2>
           <p className="text-xs text-ink-950/60 dark:text-paper/60 mb-5">
-            Uses <code className="font-mono">prisma.$transaction</code> to update application state & create an audit entry simultaneously.
+            Uses <code className="font-mono">db.transaction</code> to update application state & create an audit entry simultaneously.
           </p>
 
           <form action={handleUpdateStatusTransaction} className="space-y-4 text-sm">
@@ -242,7 +244,7 @@ export default async function PrismaDemoPage() {
               type="submit"
               className="w-full py-2.5 bg-gold-600 hover:bg-gold-500 text-white rounded font-medium transition-colors text-sm"
             >
-              Run $transaction
+              Run transaction
             </button>
           </form>
         </div>

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/db";
+import { user, session, applications } from "@/db/schema";
 
 /**
  * Confidential Server Data Endpoint (Admin Only)
@@ -32,9 +33,9 @@ export async function GET() {
 
   try {
     [userCount, sessionCount, applicationCount] = await Promise.all([
-      prisma.user.count(),
-      prisma.session.count(),
-      prisma.application.count(),
+      db.$count(user),
+      db.$count(session),
+      db.$count(applications),
     ]);
   } catch (e) {
     console.warn("Could not query DB counts:", e);

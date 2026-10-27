@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import {
+  seedSampleApplication,
   getUniversitiesWithRelations,
   createUniversityWithReviewsTransaction,
   updateApplicationWithAuditTransaction,
 } from "@/lib/prisma-transactions";
-import { prisma } from "@/lib/prisma";
 
 // GET: Fetch all universities with nested Reviews & Applications (Relational query)
 export async function GET() {
@@ -51,33 +51,7 @@ export async function POST(request: Request) {
     }
 
     if (action === "seed-sample-application") {
-      // Create a university with an application to test transactions on
-      let uni = await prisma.university.findFirst({
-        include: { applications: true },
-      });
-
-      if (!uni) {
-        uni = await prisma.university.create({
-          data: {
-            name: "ETH Zurich",
-            country: "Switzerland",
-            city: "Zurich",
-            ranking: 7,
-            tuition: 1600,
-            acceptanceRate: 0.27,
-          },
-          include: { applications: true },
-        });
-      }
-
-      const app = await prisma.application.create({
-        data: {
-          universityId: uni.id,
-          program: "MSc Robotics, Systems and Control",
-          status: "Draft",
-          progress: 20,
-        },
-      });
+      const app = await seedSampleApplication();
 
       return NextResponse.json({ success: true, data: app }, { status: 201 });
     }

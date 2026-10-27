@@ -1,4 +1,6 @@
-import { prisma } from "@/lib/prisma";
+import { db } from "@/db";
+import { universities, reviews, applications, auditLogs } from "@/db/schema";
+import { desc, eq, inArray } from "drizzle-orm";
 
 export interface UniversityWithReviewsInput {
   name: string;
@@ -16,105 +18,68 @@ export interface UniversityWithReviewsInput {
   }>;
 }
 
-/**
- * Transactional Operation 1: Nested / Atomic Creation
- * Atomically inserts a University and its related Reviews in a single query transaction.
- */
 export async function createUniversityWithReviewsTransaction(data: UniversityWithReviewsInput) {
-  return await prisma.university.create({
-    data: {
-      name: data.name,
-      country: data.country,
-      city: data.city,
-      ranking: data.ranking,
-      tuition: data.tuition,
-      acceptanceRate: data.acceptanceRate,
-      overview: data.overview,
-      reviews: {
-        create: data.reviews.map((r) => ({
-          author: r.author,
-          program: r.program,
-          rating: r.rating,
-          quote: r.quote,
-        })),
-      },
-    },
-    include: {
-      reviews: true,
-      applications: true,
-    },
+  return db.transaction(async (tx) => {
+    const { reviews: reviewInputs, ...universityData } = data;
+    const [university] = await tx.insert(universities).values(universityData).returning();
+    const insertedReviews = reviewInputs.length
+      ? await tx.insert(reviews).values(reviewInputs.map((review) => ({ ...review, universityId: university.id }))).returning()
+      : [];
+    return { ...university, reviews: insertedReviews, applications: [] };
   });
 }
 
-/**
- * Transactional Operation 2: Interactive Transaction ($transaction)
- * Atomically updates an application's progress & status while generating an immutable AuditLog entry.
- * If either operation fails, both are rolled back automatically.
- */
 export async function updateApplicationWithAuditTransaction(
   applicationId: string,
   newStatus: string,
   newProgress: number,
-  shouldSimulateFailure: boolean = false
+  shouldSimulateFailure = false
 ) {
-  return await prisma.$transaction(async (tx: any) => {
-    // Step 1: Read existing state
-    const current = await tx.application.findUnique({
-      where: { id: applicationId },
-    });
-
-    if (!current) {
-      throw new Error(`Application with ID ${applicationId} not found.`);
-    }
-
-    // Step 2: Update application
-    const updatedApplication = await tx.application.update({
-      where: { id: applicationId },
-      data: {
-        status: newStatus,
-        progress: newProgress,
-      },
-    });
-
-    // Step 3: Write audit log record
-    const auditRecord = await tx.auditLog.create({
-      data: {
-        applicationId,
-        action: "STATUS_CHANGE",
-        previousValue: current.status,
-        newValue: newStatus,
-      },
-    });
-
-    // Step 4: Deliberate rollback demonstration (if requested)
+  return db.transaction(async (tx) => {
+    const [current] = await tx.select().from(applications).where(eq(applications.id, applicationId)).for("update");
+    if (!current) throw new Error(`Application with ID ${applicationId} not found.`);
+    const [application] = await tx.update(applications).set({ status: newStatus, progress: newProgress })
+      .where(eq(applications.id, applicationId)).returning();
+    const [audit] = await tx.insert(auditLogs).values({
+      applicationId, action: "STATUS_CHANGE", previousValue: current.status, newValue: newStatus,
+    }).returning();
     if (shouldSimulateFailure) {
-      throw new Error(
-        "SIMULATED_TRANSACTION_FAILURE: Deliberate rollback triggered. Application update and AuditLog were reverted."
-      );
+      throw new Error("SIMULATED_TRANSACTION_FAILURE: Deliberate rollback triggered. Application update and AuditLog were reverted.");
     }
-
-    return {
-      application: updatedApplication,
-      audit: auditRecord,
-    };
+    return { application, audit };
   });
 }
 
-/**
- * Fetch all Universities with their related reviews and applications
- */
 export async function getUniversitiesWithRelations() {
-  return await prisma.university.findMany({
-    include: {
-      reviews: true,
-      applications: {
-        include: {
-          auditLogs: {
-            orderBy: { timestamp: "desc" },
-          },
-        },
-      },
-    },
-    orderBy: { createdAt: "desc" },
+  return db.transaction(async (tx) => {
+    const universityRows = await tx.select().from(universities).orderBy(desc(universities.createdAt));
+    if (!universityRows.length) return [];
+    const ids = universityRows.map((row) => row.id);
+    const reviewRows = await tx.select().from(reviews).where(inArray(reviews.universityId, ids));
+    const applicationRows = await tx.select().from(applications).where(inArray(applications.universityId, ids));
+    const logs = applicationRows.length
+      ? await tx.select().from(auditLogs).where(inArray(auditLogs.applicationId, applicationRows.map((row) => row.id))).orderBy(desc(auditLogs.timestamp))
+      : [];
+    return universityRows.map((university) => ({
+      ...university,
+      reviews: reviewRows.filter((review) => review.universityId === university.id),
+      applications: applicationRows.filter((application) => application.universityId === university.id)
+        .map((application) => ({ ...application, auditLogs: logs.filter((log) => log.applicationId === application.id) })),
+    }));
+  });
+}
+
+export async function seedSampleApplication() {
+  return db.transaction(async (tx) => {
+    let [university] = await tx.select().from(universities).limit(1);
+    if (!university) {
+      [university] = await tx.insert(universities).values({
+        name: "ETH Zurich", country: "Switzerland", city: "Zurich", ranking: 7, tuition: 1600, acceptanceRate: 0.27,
+      }).returning();
+    }
+    const [application] = await tx.insert(applications).values({
+      universityId: university.id, program: "MSc Robotics, Systems and Control", status: "Draft", progress: 20,
+    }).returning();
+    return application;
   });
 }
