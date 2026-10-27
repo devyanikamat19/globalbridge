@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/globalbridge_catalog";
+const MONGODB_URI = process.env.MONGODB_URI;
 
 interface MongooseCache {
   conn: typeof mongoose | null;
@@ -19,6 +19,13 @@ if (!global.mongooseCache) {
 }
 
 export async function connectToDatabase(): Promise<typeof mongoose> {
+  if (!MONGODB_URI) {
+    throw new Error(
+      "[MongoDB] MONGODB_URI environment variable is not set. " +
+        "Add it to your Vercel project settings or .env.local file."
+    );
+  }
+
   if (cached.conn && cached.conn.connection.readyState === 1) {
     return cached.conn;
   }
@@ -26,32 +33,10 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
-      serverSelectionTimeoutMS: 2000,
+      serverSelectionTimeoutMS: 5000,
     };
 
-    cached.promise = (async () => {
-      // 1. Try connecting to the specified MONGODB_URI first
-      try {
-        const m = await mongoose.connect(MONGODB_URI, opts);
-        return m;
-      } catch (err: any) {
-        console.warn(
-          `[MongoDB] Direct connection to ${MONGODB_URI} failed (${err.message}). Starting in-memory fallback...`
-        );
-      }
-
-      // 2. Fallback to MongoMemoryServer if local MongoDB is not installed/running
-      try {
-        const { MongoMemoryServer } = await import("mongodb-memory-server");
-        const mongod = await MongoMemoryServer.create();
-        const memoryUri = mongod.getUri();
-        console.log(`[MongoDB] Connected to in-memory MongoDB instance at ${memoryUri}`);
-        return await mongoose.connect(memoryUri);
-      } catch (fallbackErr: any) {
-        console.error("[MongoDB] In-memory fallback initialization failed:", fallbackErr.message);
-        throw fallbackErr;
-      }
-    })();
+    cached.promise = mongoose.connect(MONGODB_URI, opts);
   }
 
   try {
