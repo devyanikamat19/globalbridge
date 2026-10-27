@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+.dark {
+  color-scheme: dark;
+}
+
+@layer base {
+  body {
+    @apply bg-paper text-ink-950 dark:bg-ink-950 dark:text-paper antialiased;
+  }
+  ::selection {
+    @apply bg-gold-500/30;
+  }
+  :focus-visible {
+    outline: 2px solid #C9A24B;
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .stub-card {
+    position: relative;
+    border-radius: 0.75rem;
+    background: white;
+    isolation: isolate;
+  }
+  .dark .stub-card {
+    background: #16283F;
+  }
+  .stub-card::before,
+  .stub-card::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 9999px;
+    background: #F5F7FA;
+    transform: translateY(-50%);
+    z-index: 2;
+  }
+  .dark .stub-card::before,
+  .dark .stub-card::after {
+    background: #0B1622;
+  }
+  .stub-card::before { left: -0.5rem; }
+  .stub-card::after { right: -0.5rem; }
+
+  .stub-divider {
+    border-top: 2px dashed rgb(30 58 95 / 0.2);
+  }
+  .dark .stub-divider {
+    border-top: 2px dashed rgb(245 247 250 / 0.15);
+  }
+
+  .eyebrow {
+    @apply font-mono text-[11px] uppercase tracking-[0.18em] text-harbor-600 dark:text-harbor-400;
+  }
+
+  .skeleton {
+    @apply relative overflow-hidden bg-ink-900/5 dark:bg-paper/10 rounded-md;
+  }
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgb(0 0 0 / 0.06), transparent);
+    animation: shimmer 1.6s infinite;
+  }
+  .dark .skeleton::after {
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.08), transparent);
+  }
+  @keyframes shimmer {
+    100% { transform: translateX(100%); }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after { animation: none; }
+}
