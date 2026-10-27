@@ -123,7 +123,7 @@ export default function AuthPage() {
           Secure Social Authentication with Better Auth
         </h1>
         <p className="text-sm text-ink-950/70 dark:text-paper/70 mt-2 max-w-2xl">
-          Unified authentication platform implementing <strong>Google</strong> and <strong>GitHub</strong> social OAuth providers along with session management backed by PostgreSQL and Prisma ORM.
+          Unified authentication platform implementing <strong>Google</strong> and <strong>GitHub</strong> social OAuth providers along with session management backed by PostgreSQL and Drizzle ORM.
         </p>
       </div>
 
@@ -393,7 +393,7 @@ export default function AuthPage() {
             </h3>
             <ul className="space-y-2 text-ink-950/70 dark:text-paper/70 list-disc list-inside">
               <li><strong>Social Providers:</strong> Configured for Google and GitHub with secure callback routing at <code className="font-mono text-[11px]">/api/auth/callback/[provider]</code>.</li>
-              <li><strong>Database Persistence:</strong> Backed by PostgreSQL using Prisma Adapter storing users, sessions, accounts, and verifications.</li>
+              <li><strong>Database Persistence:</strong> Backed by PostgreSQL using Drizzle Adapter storing users, sessions, accounts, and verifications.</li>
               <li><strong>Zero External Lock-in:</strong> Fully self-hosted without reliance on proprietary third-party auth vendors.</li>
               <li><strong>Ready for Experiment 8:</strong> User model contains a <code className="font-mono text-[11px]">role</code> field (&quot;admin&quot; | &quot;user&quot; | &quot;guest&quot;) ready for proxy/middleware route guards.</li>
             </ul>

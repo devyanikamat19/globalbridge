@@ -1,6 +1,8 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
+import { db } from "@/db";
+import { user } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -8,10 +10,7 @@ import { revalidatePath } from "next/cache";
  */
 export async function setDemoUserRole(email: string, role: "admin" | "user") {
   try {
-    await prisma.user.updateMany({
-      where: { email },
-      data: { role },
-    });
+    await db.update(user).set({ role }).where(eq(user.email, email));
     revalidatePath("/role-demo");
     revalidatePath("/auth");
     return { success: true };

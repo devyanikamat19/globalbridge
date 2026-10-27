@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { getCatalogOverview, createCategoryAction, createProductAction, adjustInventoryAction } from "@/lib/catalog-actions";
 
 export default async function CatalogDemoPage() {
